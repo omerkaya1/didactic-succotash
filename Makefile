@@ -13,7 +13,7 @@ mod:
 
 .PHONY:	build
 build:
-	go build -o $(BUILD)/app $(CURDIR)
+	go build -o $(BUILD)/app $(CURDIR)/cmd
 
 .PHONY: dockerbuild
 dockerbuild:
@@ -29,5 +29,7 @@ docker-compose-down:
 
 .PHONY: clean
 clean:
-	go clean $(CURDIR)
+	go clean $(CURDIR)/cmd
 	rm -rf $(BUILD)
+
+.DEFAULT_GOAL := build

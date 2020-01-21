@@ -1,15 +1,19 @@
 package main
 
-import "log"
+import (
+	"log"
+
+	"github.com/omerkaya1/didactic-succotash/internal"
+)
 
 func main() {
 	// Init Storage
-	storage, err := NewStorage("")
+	storage, err := internal.NewStorage("")
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Init server
-	server := NewServer(storage)
+	server := internal.NewServer(storage)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
 	}
