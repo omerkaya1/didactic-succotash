@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/satori/go.uuid"
 )
 
 type Storage struct {
@@ -28,28 +29,23 @@ func NewStorage(dbName, dbUser, ssl, pwd, host, port string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) UpdateBalance(ctx context.Context, state string, amount float64, transactionID string) error {
-	fmt.Printf("%s, %f, %s", state, amount, transactionID)
+func (s *Storage) UpdateBalance(ctx context.Context, state string, amount float64, transactionID string) (uuid.UUID, error) {
 	if err := s.transactionIDCheck(ctx, transactionID); err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	// Get the last value
 	val, err := s.getTheLastStoredAmount()
 	if err != nil {
-		return err
-	}
-	// Prime computations
-	if state == "win" {
-		val += amount
+		return uuid.Nil, err
 	}
 
 	query := "insert into user_balance(id, amount, transaction) values(default, $1, $2)"
 	_, err = s.db.ExecContext(ctx, query, val, transactionID)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
-	return nil
+	return uuid.UUID{}, nil
 }
 
 func (s *Storage) transactionIDCheck(ctx context.Context, id string) error {
@@ -82,5 +78,6 @@ func (s *Storage) transactionIDCheck(ctx context.Context, id string) error {
 }
 
 func (s *Storage) getTheLastStoredAmount() (float64, error) {
+	// query := `select * from user_balance where user_name=$1 order by start_time asc`
 	return 0, nil
 }

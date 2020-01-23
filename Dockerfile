@@ -6,12 +6,11 @@ RUN go mod download
 
 FROM dep_builder as app_builder
 ENV APP_NAME app
-ENV CGO_ENABLED 0
 WORKDIR /opt/${APP_NAME}
-COPY --from=dependency-builder /opt/app .
-RUN go build -o ./bin/app .
+COPY --from=dep_builder /opt/app .
+RUN CGO_ENABLED=0 go build -o ./bin/app ./cmd
 
 FROM scratch
 WORKDIR /opt/app
-COPY --from=app-builder /opt/abf-guard/bin/app ./bin/
+COPY --from=app_builder /opt/app/bin/app ./bin/
 CMD ["./bin/app"]

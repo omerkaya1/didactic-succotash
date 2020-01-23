@@ -4,6 +4,7 @@ VERSION?= v$(shell git rev-list HEAD --count)
 ARCH?= $(shell uname -m)
 SYSTEM?= $(shell uname)
 export CGO_ENABLED=0
+export IMAGE_TAG=app_${ARCH}:${VERSION}
 
 .PHONY: mod
 mod:
@@ -21,7 +22,7 @@ test:
 
 .PHONY: dockerbuild
 dockerbuild:
-	docker build -t app_${SYSTEM}_${ARCH}:${VERSION} $(CURDIR)/.
+	docker build -t app_${ARCH}:${VERSION} $(CURDIR)/.
 
 .PHONY: docker-compose-up
 docker-compose-up:
@@ -33,7 +34,7 @@ docker-compose-down:
 
 .PHONY: docker-scale
 docker-scale:
-	docker-compose scale app=${NUMBER}
+	docker-compose -f $(CURDIR)/docker-compose.yml up -d --scale ${SERVICE}=${NUMBER}
 
 .PHONY: clean
 clean:

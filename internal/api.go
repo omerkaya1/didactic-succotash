@@ -45,14 +45,15 @@ func (s *Server) BalanceHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	// Main weight lifting
-	if err := s.StorageService.UpdateBalance(r.Context(), p.State, p.Amount, p.TransactionID); err != nil {
+	id, err := s.StorageService.UpdateBalance(r.Context(), p.State, p.Amount, p.TransactionID)
+	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(rw, "error: %s", err)
 		return
 	}
 
 	rw.WriteHeader(http.StatusOK)
-	rw.Write(buf)
+	rw.Write(id.Bytes())
 }
 
 func validateHeaderVal(val string) bool {
