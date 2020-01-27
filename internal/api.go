@@ -54,11 +54,11 @@ func (s *Server) BalanceHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	t := Transaction{
-		ID:            uuid.NewV4(),
-		Time:          time.Now(),
-		State:         p.State,
-		OpAmount:      p.Amount,
-		TransactionID: p.TransactionID,
+		ID:          uuid.NewV4(),
+		Time:        time.Now(),
+		State:       p.State,
+		Amount:      p.Amount,
+		Transaction: p.TransactionID,
 	}
 	// Main weight lifting
 	id, err := s.StorageService.UpdateBalance(r.Context(), t)
@@ -69,7 +69,7 @@ func (s *Server) BalanceHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	rw.WriteHeader(http.StatusOK)
-	rw.Write(id.Bytes())
+	rw.Write([]byte(id.String()))
 }
 
 func validateHeaderVal(val string) bool {

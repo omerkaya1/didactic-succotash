@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -16,12 +17,12 @@ type Storage struct {
 
 // God forbid to do that in production!
 type Transaction struct {
-	ID            uuid.UUID
-	Time          time.Time
-	State         string
-	OpAmount      float32
-	Balance       float32
-	TransactionID string
+	ID          uuid.UUID
+	Time        time.Time
+	State       string
+	Amount      float32
+	Balance     float32
+	Transaction string
 }
 
 const dbPrefix = "db"
@@ -43,7 +44,7 @@ func NewStorage(dbName, dbUser, ssl, pwd, host, port string) (*Storage, error) {
 
 func (s *Storage) UpdateBalance(ctx context.Context, t Transaction) (uuid.UUID, error) {
 	// Check the uniqueness of the transaction
-	if err := s.transactionIDCheck(ctx, t.TransactionID); err != nil {
+	if err := s.transactionIDCheck(ctx, t.Transaction); err != nil {
 		return uuid.Nil, err
 	}
 	// Get the last stored balance
@@ -54,9 +55,9 @@ func (s *Storage) UpdateBalance(ctx context.Context, t Transaction) (uuid.UUID, 
 	// Check the balance and perform the necessary operations
 	switch t.State {
 	case "win":
-		t.Balance += t.OpAmount
+		t.Balance = t.Amount + val
 	case "lost":
-		if result := val - t.Balance; result >= 1 {
+		if result := val - t.Amount; result >= 0 {
 			t.Balance = result
 		} else {
 			return uuid.Nil, fmt.Errorf("%s: the overal balance cannot be negative", dbPrefix)
@@ -66,8 +67,8 @@ func (s *Storage) UpdateBalance(ctx context.Context, t Transaction) (uuid.UUID, 
 		return uuid.Nil, fmt.Errorf("%s: unknown state: %s", dbPrefix, t.State)
 	}
 
-	query := `insert into user_balance(id, time, state, operation_amount, balance, transaction)
-			values(:id, :time, :state, :operation_amount, :balance, :transaction)`
+	query := `insert into user_balance(id, time, state, amount, balance, transaction)
+			values(:id, :time, :state, :amount, :balance, :transaction)`
 	_, err = s.db.NamedExecContext(ctx, query, t)
 	if err != nil {
 		return uuid.Nil, err
@@ -79,13 +80,14 @@ func (s *Storage) transactionIDCheck(ctx context.Context, id string) error {
 	// Fetch the last element form the table
 	// query := "select * from user_balance where transaction=$1 order by time desc limit 1"
 	query := "select * from user_balance where transaction=$1 limit 1"
-	row := s.db.QueryRowContext(ctx, query, id)
-	var transactionID string
+	row := s.db.QueryRowxContext(ctx, query, id)
+	var transaction Transaction
 	// Check transaction. If true, then the transaction was already stored; return.
-	if err := row.Scan(&transactionID); err != nil {
+	if err := row.StructScan(&transaction); err == sql.ErrNoRows {
+		return nil
+	} else {
 		return err
 	}
-	return fmt.Errorf("%s: transaction with id %s was already stored", dbPrefix, transactionID)
 }
 
 func (s *Storage) getBalance(ctx context.Context) (float32, error) {
