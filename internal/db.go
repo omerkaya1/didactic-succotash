@@ -38,7 +38,6 @@ func NewStorage(dbName, dbUser, ssl, pwd, host, port string) (*Storage, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(3)
-	db.SetMaxIdleConns(2)
 	return &Storage{db: db}, nil
 }
 
@@ -66,14 +65,19 @@ func (s *Storage) UpdateBalance(ctx context.Context, t Transaction) (uuid.UUID, 
 		// Here we can panic, but I'm too laze to handle it, so...err
 		return uuid.Nil, fmt.Errorf("%s: unknown state: %s", dbPrefix, t.State)
 	}
-
-	query := `insert into user_balance(id, time, state, amount, balance, transaction)
-			values(:id, :time, :state, :amount, :balance, :transaction)`
-	_, err = s.db.NamedExecContext(ctx, query, t)
+	// Prepare a transaction
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	return t.ID, nil
+	query := `insert into user_balance(id, time, state, amount, balance, transaction)
+			values(:id, :time, :state, :amount, :balance, :transaction)`
+
+	_, err = tx.NamedExecContext(ctx, query, t)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return t.ID, tx.Commit()
 }
 
 func (s *Storage) transactionIDCheck(ctx context.Context, id string) error {
